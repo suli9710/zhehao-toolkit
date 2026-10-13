@@ -1,0 +1,15 @@
+/inspection/
+/build/
+/dist/
+/assets/zhehao-*.png
+/assets/zhehao.ico
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.pem
+*.key
+*.pfx
+*.p12
+*.secrets.*
+/docs/*.zip

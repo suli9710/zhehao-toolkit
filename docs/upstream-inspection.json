@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/Lypc233/LaoYing-Toolkit",
+  "default_branch_commit": "05143559a64b545aeb3e68724e064bf3e81209fe",
+  "verified_release_tag": "v1.8.4",
+  "inspected_at": "2026-10-13",
+  "verified_archive": "LaoYing-Toolkit-v1.8.4-source.zip",
+  "files": [
+    "README.md",
+    "README_EN.md",
+    "assets/banner.png",
+    "assets/banner.svg"
+  ],
+  "release_executable": "LaoYing.Toolkit.v1.8.4.exe",
+  "finding": "The release source archive contains documentation and banner assets only. No program source, project files, or build scripts are present."
+}
