@@ -107,7 +107,7 @@ if ($LiveGitHub) {
     $check = $updates.GetMethod('CheckAsync').MakeGenericMethod($releaseType)
     $remote = $check.Invoke($null, [object[]]@(('https://github.com/' + $release.repository), [string]$previousVersionText, [Threading.CancellationToken]::None)).GetAwaiter().GetResult()
     if ($remote.Version -ne $release.version -or $remote.AssetSha256 -ne $manifest.Sha256) { throw 'Live GitHub feed differs from the signed release.' }
-    if ($remote.Notes -ne [IO.File]::ReadAllText((Join-Path $projectDirectory ('docs\releases\v' + $release.version + '.md')), [Text.Encoding]::UTF8)) { throw 'Live release notes differ from the signed notes.' }
+    if ($remote.Notes -ne $manifest.Notes) { throw 'Live release notes differ from the signed notes in the verified build.' }
     if ($null -ne $check.Invoke($null, [object[]]@(('https://github.com/' + $release.repository), [string]$release.version, [Threading.CancellationToken]::None)).GetAwaiter().GetResult()) { throw 'Live feed offers the currently installed version again.' }
     $checks.Add([ordered]@{ name = 'live anonymous GitHub signed-manifest update check without REST API quota'; result = 'passed' })
 }
