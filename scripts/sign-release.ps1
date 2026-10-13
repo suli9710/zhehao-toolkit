@@ -11,6 +11,8 @@ $metadata = Get-Content -LiteralPath (Join-Path $distributionDirectory '喆好�
 $hash = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($hash -ne $metadata.output_sha256 -or $metadata.version -ne $release.version) { throw 'Release hash or version differs from build metadata.' }
 $assetName = 'Zhehao.Toolkit.v' + $release.version + '.exe'
+$notesPath = Join-Path $projectDirectory ('docs\releases\v' + $release.version + '.md')
+if (-not (Test-Path -LiteralPath $notesPath -PathType Leaf)) { throw 'Signed release notes are missing.' }
 $payload = [ordered]@{
     format = 1
     product = $release.product
@@ -20,6 +22,7 @@ $payload = [ordered]@{
     size = (Get-Item -LiteralPath $executable).Length
     sha256 = $hash
     download_url = 'https://github.com/' + $release.repository + '/releases/download/v' + $release.version + '/' + $assetName
+    notes = [IO.File]::ReadAllText($notesPath, [Text.Encoding]::UTF8)
 }
 $payloadBytes = [Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json -Compress))
 $rsa = [Security.Cryptography.RSA]::Create()

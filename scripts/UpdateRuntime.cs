@@ -21,6 +21,7 @@ namespace Zhehao.Toolkit.Runtime
         public string DownloadUrl { get; set; }
         public string Sha256 { get; set; }
         public long Size { get; set; }
+        public string Notes { get; set; }
     }
 
     public static class GitHubUpdates
@@ -74,7 +75,9 @@ namespace Zhehao.Toolkit.Runtime
                         sha == null || sha.Length != 64)
                         throw new CryptographicException("更新清单的产品、版本或下载地址无效。");
                     foreach (char digit in sha) if (!Uri.IsHexDigit(digit)) throw new CryptographicException("更新哈希格式无效。");
-                    return new SignedManifest { Version = version, FileName = fileName, DownloadUrl = downloadUrl, Sha256 = sha.ToUpperInvariant(), Size = size };
+                    JsonElement notes;
+                    string releaseNotes = root.TryGetProperty("notes", out notes) && notes.ValueKind == JsonValueKind.String ? notes.GetString() : "";
+                    return new SignedManifest { Version = version, FileName = fileName, DownloadUrl = downloadUrl, Sha256 = sha.ToUpperInvariant(), Size = size, Notes = releaseNotes };
                 }
             }
         }
@@ -147,8 +150,10 @@ namespace Zhehao.Toolkit.Runtime
 
         private static async Task<string> FetchManifestAsync(string version, CancellationToken token)
         {
-            version = NormalizeVersion(version);
-            Uri uri = new Uri("https://github.com/" + Repository + "/releases/download/v" + version + "/" + ManifestName);
+            // GitHub's public latest-asset route does not consume the anonymous REST API quota.
+            if (version != null) version = NormalizeVersion(version);
+            string route = version == null ? "latest/download/" : "download/v" + version + "/";
+            Uri uri = new Uri("https://github.com/" + Repository + "/releases/" + route + ManifestName);
             using (HttpClient client = CreateClient())
             {
                 for (int redirect = 0; redirect <= 5; redirect++)
@@ -160,7 +165,7 @@ namespace Zhehao.Toolkit.Runtime
                         {
                             string json = await ReadSmallResponseAsync(response, ManifestLimit, token).ConfigureAwait(false);
                             SignedManifest manifest = VerifyManifest(json);
-                            if (manifest.Version != version) throw new CryptographicException("更新清单版本不一致。");
+                            if (version != null && manifest.Version != version) throw new CryptographicException("更新清单版本不一致。");
                             CacheManifest(manifest.Version, json);
                             return json;
                         }
@@ -228,20 +233,13 @@ namespace Zhehao.Toolkit.Runtime
             if (repositoryUrl != "https://github.com/" + Repository) throw new InvalidDataException("更新仓库配置不一致。");
             try
             {
-                string json;
-                using (HttpClient client = CreateClient())
-                using (HttpResponseMessage response = await client.GetAsync("https://api.github.com/repos/" + Repository + "/releases/latest", HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false))
-                {
-                    if (response.StatusCode == HttpStatusCode.NotFound) return default(T);
-                    json = await ReadSmallResponseAsync(response, 512 * 1024, token).ConfigureAwait(false);
-                }
-                string version;
-                using (JsonDocument document = JsonDocument.Parse(json))
-                    version = NormalizeVersion(document.RootElement.GetProperty("tag_name").GetString());
-                if (new Version(version).CompareTo(new Version(NormalizeVersion(currentVersion))) <= 0) return default(T);
-                string signed = await FetchManifestAsync(version, token).ConfigureAwait(false);
-                return ParseRelease<T>(json, signed, currentVersion);
+                string signed = await FetchManifestAsync(null, token).ConfigureAwait(false);
+                SignedManifest manifest = VerifyManifest(signed);
+                if (new Version(manifest.Version).CompareTo(new Version(NormalizeVersion(currentVersion))) <= 0) return default(T);
+                string releaseUrl = "https://github.com/" + Repository + "/releases/tag/v" + manifest.Version;
+                return (T)Activator.CreateInstance(typeof(T), new object[] { manifest.Version, manifest.Notes, new Uri(manifest.DownloadUrl), new Uri(releaseUrl), (long?)manifest.Size, manifest.Sha256 });
             }
+            catch (HttpRequestException error) when (error.StatusCode == HttpStatusCode.NotFound) { return default(T); }
             catch (CryptographicException error) { throw new InvalidDataException("更新信息校验失败。", error); }
             catch (KeyNotFoundException error) { throw new InvalidDataException("更新响应缺少必要字段。", error); }
         }

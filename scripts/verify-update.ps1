@@ -107,13 +107,16 @@ if ($LiveGitHub) {
     $check = $updates.GetMethod('CheckAsync').MakeGenericMethod($releaseType)
     $remote = $check.Invoke($null, [object[]]@(('https://github.com/' + $release.repository), [string]$previousVersionText, [Threading.CancellationToken]::None)).GetAwaiter().GetResult()
     if ($remote.Version -ne $release.version -or $remote.AssetSha256 -ne $manifest.Sha256) { throw 'Live GitHub feed differs from the signed release.' }
-    $checks.Add([ordered]@{ name = 'live anonymous GitHub update check'; result = 'passed' })
+    if ($remote.Notes -ne [IO.File]::ReadAllText((Join-Path $projectDirectory ('docs\releases\v' + $release.version + '.md')), [Text.Encoding]::UTF8)) { throw 'Live release notes differ from the signed notes.' }
+    if ($null -ne $check.Invoke($null, [object[]]@(('https://github.com/' + $release.repository), [string]$release.version, [Threading.CancellationToken]::None)).GetAwaiter().GetResult()) { throw 'Live feed offers the currently installed version again.' }
+    $checks.Add([ordered]@{ name = 'live anonymous GitHub signed-manifest update check without REST API quota'; result = 'passed' })
 }
 $reportPath = Join-Path $distributionDirectory '验证报告.json'
 $report = Get-Content -LiteralPath $reportPath -Raw -Encoding utf8 | ConvertFrom-Json
 $report | Add-Member -NotePropertyName github_update_test -NotePropertyValue ([ordered]@{
     result = 'passed'
     update_repository = $release.repository
+    discovery_url = 'https://github.com/' + $release.repository + '/releases/latest/download/zhehao-update.json'
     automatic_download = $true
     package_verification = 'RSA-PSS SHA-256 signed manifest, pinned public key, EXE SHA-256, size and version'
     restart_transaction_retained = $true

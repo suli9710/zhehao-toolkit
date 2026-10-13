@@ -1,31 +1,31 @@
 # 喆好工具箱
 
-Windows 游戏环境配置与维护工具，集中管理核心调度、系统优化、DLSS 模型与降压超频等功能。当前版本：**1.8.5**。
+Windows 游戏环境配置与维护工具，集中管理核心调度、系统优化、DLSS 模型与降压超频等功能。当前版本：**1.8.6**。
 
 ## 下载与使用
 
 [下载最新版本](https://github.com/suli9710/zhehao-toolkit/releases/latest)
 
-下载 Release 中的 `Zhehao.Toolkit.v1.8.5.exe` 即可运行，也可改名为 `喆好工具箱.exe`。支持 Windows 10 / 11 x64，单文件包自带 .NET 10 运行时、功能模块和更新运行库。按程序提示授予管理员权限。
+下载 Release 中的 `Zhehao.Toolkit.v1.8.6.exe` 即可运行，也可改名为 `喆好工具箱.exe`。支持 Windows 10 / 11 x64，单文件包自带 .NET 10 运行时、功能模块和更新运行库。按程序提示授予管理员权限。
 
 替换旧版时，先从托盘正常退出旧进程，再运行新版。
 
-![关于页](assets/about-preview.png)
+![关于页示例](assets/about-preview.png)
 
 ## 在线更新
 
 设置中保持“自动检查更新”开启。程序连接本仓库的 GitHub Releases，发现新版后自动下载，下载完成后可重启安装。更新页也支持手动检查。
 
-更新清单采用 RSA-PSS / SHA-256 签名，程序内置公钥并核对下载地址、产品、版本、文件长度和 EXE 哈希。保留原有退出准备、文件锁、更新事务与失败回滚流程。普通用户无需配置 GitHub 账号、Token 或额外运行环境；在线更新需要能够访问 GitHub。
+检查入口为 GitHub 公开签名清单下载地址，可避免共享 IP 的匿名 API 限流。更新清单采用 RSA-PSS / SHA-256 签名，程序内置公钥并核对下载地址、产品、版本、文件长度和 EXE 哈希。保留原有退出准备、文件锁、更新事务与失败回滚流程。普通用户无需配置 GitHub 账号、Token 或额外运行环境；在线更新需要能够访问 GitHub。
 
-## v1.8.5 变更
+## v1.8.6 变更
 
 - 关于页仅保留软件简介和版本号，导航描述更新为“简介与版本”。
 - 主窗口、托盘、程序图标、产品信息使用“喆好工具箱”品牌。
 - 在线更新使用本仓库发布的签名版本并自动下载。
 - 内置 PBO 启动路径修复：使用 Windows 文件句柄取得 EXE 真实路径，兼容中文、空格、长路径及迁移后的目录联接。原有路径、权限与文件保护继续生效。
 
-[版本说明](docs/releases/v1.8.5.md)
+[版本说明](docs/releases/v1.8.6.md)
 
 ## 验证范围
 
@@ -46,7 +46,7 @@ Windows 游戏环境配置与维护工具，集中管理核心调度、系统优
 
 ```powershell
 python -m pip install -r requirements.txt
-pwsh -NoProfile -File scripts/build.ps1 -VerifyStartup -OutputDirectory dist/v1.8.5
+pwsh -NoProfile -File scripts/build.ps1 -VerifyStartup -OutputDirectory dist/v1.8.6
 ```
 
 脚本自动下载并校验上游 v1.8.4 发布包，生成图标，修改主程序集与 WPF 资源，内嵌更新运行库，再重新封装为单文件 EXE。原包保持不变，临时材料及验证文件写入 `inspection/`、`build/` 和 `dist/`。
@@ -58,12 +58,12 @@ pwsh -NoProfile -File scripts/build.ps1 -VerifyStartup -OutputDirectory dist/v1.
 维护者更新 `release.json` 的版本及对应版本说明，使用现有私钥构建、签名并验证，然后提交并推送代码：
 
 ```powershell
-pwsh -NoProfile -File scripts/build.ps1 -VerifyStartup -SignRelease -OutputDirectory dist/v1.8.5
+pwsh -NoProfile -File scripts/build.ps1 -VerifyStartup -SignRelease -OutputDirectory dist/v1.8.6
 git add .
-git commit -m "Release v1.8.5"
+git commit -m "Release v1.8.6"
 git push origin HEAD:main
-pwsh -NoProfile -File scripts/publish-release.ps1 -OutputDirectory dist/v1.8.5
-pwsh -NoProfile -File scripts/verify-update.ps1 -OutputDirectory dist/v1.8.5 -LiveGitHub
+pwsh -NoProfile -File scripts/publish-release.ps1 -OutputDirectory dist/v1.8.6
+pwsh -NoProfile -File scripts/verify-update.ps1 -OutputDirectory dist/v1.8.6 -LiveGitHub
 ```
 
 发布脚本先创建草稿，上传 EXE、签名清单与校验文件，核对 GitHub 资产长度及摘要后公开发布。已公开版本不允许覆盖，修改发布内容时应增加版本号。
