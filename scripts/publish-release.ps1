@@ -70,18 +70,25 @@ try {
     if ($existing.Count -eq 1 -and -not $existing[0].draft) { throw 'This version is already public. Increase release.json version instead of replacing it.' }
     if ($existing.Count -eq 0) {
         Invoke-Gh -Arguments @('release', 'create', $tag, '--repo', $release.repository, '--target', $sourceCommit, '--title', ($release.product + ' ' + $tag), '--notes-file', $NotesFile, '--draft')
+        $createdPages = ((Invoke-Gh -Arguments @('api', ('repos/' + $release.repository + '/releases?per_page=100'), '--paginate', '--slurp')) -join "`n") | ConvertFrom-Json
+        $created = @($createdPages | ForEach-Object { $_ } | Where-Object { $_.tag_name -eq $tag })
+        if ($created.Count -ne 1 -or -not $created[0].draft) { throw 'Cannot locate the new draft release.' }
+        $releaseId = $created[0].id
     }
     else {
         if ($existing[0].target_commitish -ne $sourceCommit) { throw 'Existing draft targets a different commit.' }
+        $releaseId = $existing[0].id
         Invoke-Gh -Arguments @('release', 'edit', $tag, '--repo', $release.repository, '--title', ($release.product + ' ' + $tag), '--notes-file', $NotesFile)
     }
     # Copy, rather than hard-link: the original package protection rejects multi-link EXEs.
     [IO.File]::Copy($executable, $assetPath, $true)
     if ((Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $hash) { throw 'EXE changed while preparing the upload.' }
-    $draft = ((Invoke-Gh -Arguments @('api', ('repos/' + $release.repository + '/releases/tags/' + $tag))) -join "`n") | ConvertFrom-Json
+    # GitHub's tag lookup may omit drafts until the tag is published; use the release ID.
+    $releaseApiPath = 'repos/' + $release.repository + '/releases/' + $releaseId
+    $draft = ((Invoke-Gh -Arguments @('api', $releaseApiPath)) -join "`n") | ConvertFrom-Json
     if (-not $draft.draft) { throw 'The release became public before upload.' }
     Invoke-Gh -Arguments @('release', 'upload', $tag, $assetPath, $manifestPath, $sumsPath, '--repo', $release.repository, '--clobber')
-    $uploaded = ((Invoke-Gh -Arguments @('api', ('repos/' + $release.repository + '/releases/tags/' + $tag))) -join "`n") | ConvertFrom-Json
+    $uploaded = ((Invoke-Gh -Arguments @('api', $releaseApiPath)) -join "`n") | ConvertFrom-Json
     if (-not $uploaded.draft) { throw 'The release became public during upload.' }
     foreach ($localPath in @($assetPath, $manifestPath, $sumsPath)) {
         $name = [IO.Path]::GetFileName($localPath)
